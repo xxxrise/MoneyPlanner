@@ -8,7 +8,7 @@
 <title>Финплан — планировщик финансов</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
 <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
 <style>
 :root{
@@ -40,10 +40,14 @@
   --overlay: rgba(4,6,14,.6);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+svg,img{-webkit-user-drag:none;user-select:none}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;font-size:16px}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
 body{min-height:100vh;min-height:100dvh}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-input,textarea,select{font:inherit;color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation}
+input,textarea,select{font:inherit;color:inherit;font-size:16px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
 
@@ -176,6 +180,7 @@ button.set-row:active{background:var(--surface-2)}
 .sync{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:14px 4px 0}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--pos)}
 .sync i.off{background:var(--muted)}
+.sync i.err{background:var(--warn)}
 
 /* empty */
 .empty{text-align:center;padding:34px 20px;color:var(--muted)}
@@ -183,7 +188,7 @@ button.set-row:active{background:var(--surface-2)}
 .empty p{margin:8px 0 0}
 
 /* bottom nav */
-.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:6px 8px calc(var(--bottom-inset) + 6px)}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(var(--bottom-inset) + 6px)}
 .nav-in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 76px 1fr 1fr;align-items:center}
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;font-weight:700;color:var(--muted)}
 .tab svg{width:24px;height:24px}
@@ -196,8 +201,8 @@ button.set-row:active{background:var(--surface-2)}
 .overlay{position:fixed;inset:0;z-index:40;background:var(--overlay);opacity:0;transition:opacity .22s ease;pointer-events:none}
 .overlay.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:520px;margin:0 auto;background:var(--surface);border-radius:28px 28px 0 0;max-height:calc(100% - var(--top-inset) - 24px);display:flex;flex-direction:column;transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
-.sheet{visibility:hidden;transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s linear .32s}
-.sheet.on{transform:none;visibility:visible;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.sheet{visibility:hidden;pointer-events:none;transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s linear .32s}
+.sheet.on{transform:none;visibility:visible;pointer-events:auto;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
 .sheet .grab{width:40px;height:5px;border-radius:5px;background:var(--line);margin:8px auto 0;flex:none}
 .sheet .sh{display:flex;align-items:center;justify-content:space-between;padding:10px 20px 6px;flex:none}
 .sheet .sh h3{margin:0;font-family:var(--display);font-weight:500;font-size:18px}
@@ -206,7 +211,7 @@ button.set-row:active{background:var(--surface-2)}
 .field > label, .field > .lbl{display:block;font-size:13px;font-weight:700;color:var(--ink-2);margin:0 2px 6px}
 .input{width:100%;height:50px;border-radius:var(--r-sm);border:1.5px solid var(--line);background:var(--surface-2);padding:0 14px;outline:none}
 .input:focus{border-color:var(--accent)}
-textarea.input{height:150px;padding:12px 14px;resize:none;font-size:12px;font-family:ui-monospace,Menlo,monospace}
+textarea.input{height:150px;padding:12px 14px;resize:none;font-size:16px;font-family:ui-monospace,Menlo,monospace}
 .btn{display:flex;align-items:center;justify-content:center;width:100%;height:54px;border-radius:18px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:16px}
 .btn:disabled{opacity:.4}
 .btn.soft{background:var(--surface-2);color:var(--ink)}
@@ -242,7 +247,38 @@ textarea.input{height:150px;padding:12px 14px;resize:none;font-size:12px;font-fa
 .daypick button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .confirm-text{color:var(--ink-2);margin:4px 0 18px}
 
+.hero-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:14px}
+.hero-foot .pace-note{margin-top:0}
+button.pace-note{background:var(--hero-ink);color:var(--hero);padding:6px 12px}
+.day{padding:16px}
+.day .t{font-weight:800;font-size:16px}
+.day .s{font-size:14px;color:var(--ink-2);margin-top:2px}
+.day .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.streak{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--warn);background:var(--warn-soft);padding:4px 10px;border-radius:999px;margin-top:10px}
+.pill.ghost{background:transparent;color:var(--muted)}
+.verdict{border-radius:var(--r-sm);padding:14px 16px;margin:4px 0 16px;background:var(--surface-2)}
+.verdict .t{font-weight:800;font-size:17px}
+.verdict .s{color:var(--ink-2);margin-top:4px}
+.verdict.ok{background:var(--pos-soft)} .verdict.ok .t{color:var(--pos)}
+.verdict.warn{background:var(--warn-soft)} .verdict.warn .t{color:var(--warn)}
+.verdict.no{background:var(--neg-soft)} .verdict.no .t{color:var(--neg)}
+.sh .acts{display:flex;align-items:center;gap:4px}
+.scan{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:14px;color:var(--accent);background:var(--accent-soft);padding:8px 12px;border-radius:999px}
+.scan svg{width:18px;height:18px}
+.lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+html.locked .lock{display:flex}
+html.locked #app, html.locked .nav{visibility:hidden}
+.lock .ic{width:76px;height:76px;border-radius:26px;background:var(--hero);color:#fff;display:grid;place-items:center}
+.lock .ic svg{width:38px;height:38px}
+.lock h2{font-family:var(--display);font-weight:600;font-size:20px;margin:6px 0 0}
+.lock p{color:var(--muted);margin:0;max-width:280px}
+.lock .btn{max-width:280px;margin-top:8px}
+.switch{position:relative;width:50px;height:30px;border-radius:999px;background:var(--line);flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--pos)}
+.switch[aria-checked="true"]::after{transform:translateX(20px)}
 .toast{position:fixed;left:50%;bottom:calc(var(--bottom-inset) + 96px);z-index:70;transform:translate(-50%,16px);opacity:0;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;padding:10px 16px;border-radius:999px;transition:all .25s ease;pointer-events:none;max-width:90vw;text-align:center}
+.toast.top{bottom:auto;top:calc(var(--top-inset) + 12px)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
 @media (prefers-reduced-motion: reduce){
@@ -266,10 +302,17 @@ textarea.input{height:150px;padding:12px 14px;resize:none;font-size:12px;font-fa
 <div class="overlay" id="overlay" data-act="close-sheet"></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="grab"></div>
-  <div class="sh"><h3 id="sheetTitle"></h3><button class="iconbtn" data-act="close-sheet" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="sh"><h3 id="sheetTitle"></h3><div class="acts"><span id="sheetExtra"></span><button class="iconbtn" data-act="close-sheet" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></div>
   <div class="body" id="sheetBody"></div>
 </section>
 <div class="toast" id="toast" role="status"></div>
+<div class="lock" id="lock" role="dialog" aria-label="Приложение заблокировано">
+  <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+  <h2>Финплан заблокирован</h2>
+  <p id="lockText">Подтвердите вход, чтобы увидеть свои финансы.</p>
+  <button class="btn" data-act="unlock">Разблокировать</button>
+</div>
+<script>try{ if(localStorage.getItem("finplan:lock")==="1" && window.Telegram && Telegram.WebApp && Telegram.WebApp.platform!=="unknown") document.documentElement.classList.add("locked"); }catch(e){}</script>
 
 <script>
 (() => {
@@ -338,25 +381,101 @@ const DEFAULT_CATS = [
   ["home","Жильё","🏠","expense"],["phone","Связь","📱","expense"],["health","Здоровье","💊","expense"],
   ["study","Учёба","📚","expense"],["sport","Спорт","🏋️","expense"],["clothes","Одежда","👕","expense"],
   ["fun","Развлечения","🎮","expense"],["gifts","Подарки","🎁","expense"],["subs","Подписки","🔁","expense"],
-  ["other","Другое","📦","expense"],
+  ["other","Другое","📦","expense"],["savings","Накопления","🐷","expense",true],
   ["salary","Зарплата","💼","income"],["grant","Стипендия","🎓","income"],["side","Подработка","🛠️","income"],
   ["gift_in","Подарки","🎀","income"],["other_in","Другое","💰","income"],
-].map(([id,name,emoji,type]) => ({ id, name, emoji, type, builtin: true }));
+].map(([id,name,emoji,type,system]) => system ? { id, name, emoji, type, builtin: true, system: true } : { id, name, emoji, type, builtin: true });
 
 const blank = () => ({
-  v: 1, updatedAt: 0,
+  v: 2, updatedAt: 0, epoch: 0, su: 0,
   settings: { currency: "₽", monthlyLimit: 0, theme: "auto" },
   cats: DEFAULT_CATS.map(c => ({...c})),
-  tx: [], budgets: {}, plans: [], goals: [],
+  tx: [], budgets: {}, plans: [], goals: [], del: {},
 });
+const CURRENCIES = ["₽", "$", "€", "₸", "Br"];
+const MAX_AMOUNT = 1e11;
+const isNum = v => typeof v === "number" && isFinite(v);
+const okDate = s => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(parseISO(s));
+const okYM = s => typeof s === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+const money2 = v => Math.round(Math.min(MAX_AMOUNT, Math.max(0, Number(v) || 0)) * 100) / 100;
+const str = (v, max) => String(v ?? "").slice(0, max);
+// Cleans any data (old versions, restored backups, a broken cloud copy) so the UI never crashes on it.
 function normalize(d){
   const b = blank();
   if (!d || typeof d !== "object") return b;
-  const out = { ...b, ...d, settings: { ...b.settings, ...(d.settings||{}) } };
-  for (const k of ["tx","plans","goals","cats"]) if (!Array.isArray(out[k])) out[k] = b[k];
-  if (!out.cats.length) out.cats = b.cats;
-  if (!out.budgets || typeof out.budgets !== "object") out.budgets = {};
-  out.plans.forEach(p => { if (!p.paid || typeof p.paid !== "object") p.paid = {}; });
+  const arr = v => Array.isArray(v) ? v.filter(x => x && typeof x === "object") : [];
+  const st = d.settings && typeof d.settings === "object" ? d.settings : {};
+  const out = {
+    v: 2, updatedAt: isNum(d.updatedAt) ? d.updatedAt : 0, epoch: isNum(d.epoch) ? d.epoch : 0, su: isNum(d.su) ? d.su : 0,
+    settings: {
+      currency: CURRENCIES.includes(st.currency) ? st.currency : "₽",
+      monthlyLimit: money2(st.monthlyLimit),
+      theme: ["auto","light","dark"].includes(st.theme) ? st.theme : "auto",
+    },
+    cats: arr(d.cats).filter(c => c.id && c.name && (c.type === "income" || c.type === "expense"))
+      .map(c => ({ ...c, id: str(c.id, 40), name: str(c.name, 24), emoji: str(c.emoji || "📦", 8) })),
+    tx: arr(d.tx).filter(t => okDate(t.date) && (t.type === "income" || t.type === "expense") && money2(t.amount) > 0)
+      .map(t => ({ ...t, id: str(t.id || uid(), 40), amount: money2(t.amount), cat: str(t.cat || (t.type === "income" ? "other_in" : "other"), 40), note: str(t.note, 80) })),
+    plans: arr(d.plans).filter(p => p.name && money2(p.amount) > 0)
+      .map(p => ({ ...p, id: str(p.id || uid(), 40), name: str(p.name, 40), amount: money2(p.amount), day: Math.min(31, Math.max(1, Math.round(Number(p.day)) || 1)), cat: str(p.cat || "other", 40), paid: p.paid && typeof p.paid === "object" && !Array.isArray(p.paid) ? p.paid : {} })),
+    goals: arr(d.goals).filter(g => g.name && money2(g.target) > 0)
+      .map(g => ({ ...g, id: str(g.id || uid(), 40), name: str(g.name, 40), emoji: str(g.emoji || "🎯", 8), target: money2(g.target), saved: money2(g.saved), deadline: okYM(g.deadline) ? g.deadline : "" })),
+    budgets: {}, del: {},
+  };
+  if (d.budgets && typeof d.budgets === "object") for (const [k, v] of Object.entries(d.budgets)) if (money2(v) > 0) out.budgets[k] = money2(v);
+  if (d.del && typeof d.del === "object") for (const [k, v] of Object.entries(d.del)) if (isNum(v)) out.del[k] = v;
+  // de-duplicate ids, keep fallback categories that deletion relies on
+  for (const k of ["cats","tx","plans","goals"]) { const seen = new Set(); out[k] = out[k].filter(x => !seen.has(x.id) && seen.add(x.id)); }
+  for (const id of ["other", "other_in", "savings"]) if (!out.cats.some(c => c.id === id)) out.cats.push({ ...DEFAULT_CATS.find(c => c.id === id) });
+  // the short-lived built-in «Аренда» category: drop it if nothing uses it, otherwise make it a normal deletable category
+  const rent = out.cats.find(c => c.id === "rent_in");
+  if (rent) {
+    if (!out.tx.some(t => t.cat === "rent_in") && !out.plans.some(p => p.cat === "rent_in")) out.cats = out.cats.filter(c => c.id !== "rent_in");
+    else delete rent.builtin;
+  }
+  return out;
+}
+
+/* ---------- change tracking & merge (so two devices never overwrite each other) ---------- */
+const COLLS = ["tx", "plans", "goals", "cats"];
+let snap = null;   // id -> json of each entity as of the last commit
+function takeSnap(){
+  snap = { set: JSON.stringify([D.settings, D.budgets]) };
+  for (const k of COLLS) { const m = new Map(); for (const x of D[k]) m.set(x.id, JSON.stringify(x)); snap[k] = m; }
+}
+// Stamps every new/changed entity with u = now, records deletions and refreshes the snapshot in one pass.
+function stampChanges(){
+  const now = Date.now(), next = {};
+  for (const k of COLLS) {
+    const prev = snap[k], m = new Map();
+    for (const x of D[k]) {
+      let j = JSON.stringify(x);
+      if (prev.get(x.id) !== j) { x.u = now; j = JSON.stringify(x); }
+      m.set(x.id, j);
+    }
+    for (const id of prev.keys()) if (!m.has(id)) D.del[id] = now;
+    next[k] = m;
+  }
+  next.set = JSON.stringify([D.settings, D.budgets]);
+  if (snap.set !== next.set) D.su = now;
+  snap = next;
+  const cutoff = now - 180 * 864e5;   // forget deletions older than ~6 months
+  for (const id in D.del) if (D.del[id] < cutoff) delete D.del[id];
+}
+function merge(L, R, localFresh){
+  const le = localFresh ? R.epoch : L.epoch;
+  if (le !== R.epoch) return le > R.epoch ? L : R;          // a reset / restore wins entirely
+  const del = { ...R.del };
+  for (const k in L.del) del[k] = Math.max(del[k] || 0, L.del[k]);
+  const dead = x => del[x.id] !== undefined && del[x.id] >= (x.u || 0);
+  const out = { ...R, del };
+  for (const k of COLLS) {
+    const lm = new Map(L[k].map(x => [x.id, x])), seen = new Set(), res = [];
+    for (const r of R[k]) { seen.add(r.id); const l = lm.get(r.id); const pick = l && (l.u || 0) > (r.u || 0) ? l : r; if (!dead(pick)) res.push(pick); }
+    for (const l of L[k]) if (!seen.has(l.id) && !dead(l)) res.push(l);
+    out[k] = res;
+  }
+  if (L.su > R.su) { out.settings = L.settings; out.budgets = L.budgets; out.su = L.su; }
   return out;
 }
 
@@ -364,26 +483,34 @@ function normalize(d){
 const LS_KEY = "finplan:data:v1";
 const CHUNK = 3900;
 const cloudOK = () => IN_TG && ver("6.9") && !!tg.CloudStorage;
+// Every CloudStorage call gets a timeout: some clients occasionally never call back.
+const timed = (fn, fallback, ms = 8000) => new Promise(res => {
+  const t = setTimeout(() => res(fallback), ms);
+  try { fn(v => { clearTimeout(t); res(v); }); } catch(e){ clearTimeout(t); res(fallback); }
+});
 const cs = {
-  get: keys => new Promise(res => { try { tg.CloudStorage.getItems(keys, (err, v) => res(err ? null : v)); } catch(e){ res(null); } }),
-  set: (k, v) => new Promise(res => { try { tg.CloudStorage.setItem(k, v, err => res(!err)); } catch(e){ res(false); } }),
-  del: keys => new Promise(res => { try { tg.CloudStorage.removeItems(keys, err => res(!err)); } catch(e){ res(false); } }),
+  get: keys => timed(done => tg.CloudStorage.getItems(keys, (err, v) => done(err ? null : v)), null),
+  set: (k, v) => timed(done => tg.CloudStorage.setItem(k, v, err => done(!err)), false),
+  del: keys => timed(done => tg.CloudStorage.removeItems(keys, err => done(!err)), false),
+  keys: () => timed(done => tg.CloudStorage.getKeys((err, k) => done(err ? null : k)), null),
 };
 const Store = {
   loadLocal(){ try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch(e){ return null; } },
-  saveLocal(d){ try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e){} },
+  saveLocal(d){ try { localStorage.setItem(LS_KEY, JSON.stringify(d)); return true; } catch(e){ return false; } },
+  async meta(){
+    const m = await cs.get(["meta"]);
+    if (m === null) throw new Error("cloud unavailable");
+    if (!m.meta) return null;
+    try { const x = JSON.parse(m.meta); return x && isNum(x.n) ? x : null; } catch(e){ return null; }
+  },
   // Double-buffered: chunks go to slot "a" or "b"; "meta" points at the complete one,
   // so closing the app mid-sync never leaves a broken copy in the cloud.
-  async loadCloud(){
-    const m = await cs.get(["meta"]);
-    if (!m || !m.meta) return null;
-    let meta; try { meta = JSON.parse(m.meta); } catch(e){ return null; }
+  async loadCloud(meta){
     const slot = meta.slot || "d";
-    Store.slot = slot;
     const keys = Array.from({length: meta.n}, (_, i) => slot + i);
     const parts = {};
     for (let i = 0; i < keys.length; i += 50) { const got = await cs.get(keys.slice(i, i+50)); if (!got) return null; Object.assign(parts, got); }
-    try { return JSON.parse(keys.map(k => parts[k] || "").join("")); } catch(e){ return null; }
+    try { const d = JSON.parse(keys.map(k => parts[k] || "").join("")); Store.slot = slot; return d; } catch(e){ return null; }
   },
   async saveCloud(d){
     const s = JSON.stringify(d);
@@ -392,47 +519,141 @@ const Store = {
     for (let i = 0; i < n; i++) { if (!(await cs.set(slot + i, s.slice(i*CHUNK, (i+1)*CHUNK)))) return false; }
     if (!(await cs.set("meta", JSON.stringify({ n, slot, updatedAt: d.updatedAt })))) return false;
     Store.slot = slot;
-    Store.cleanup(slot, n);
+    cs.keys().then(keys => {
+      if (!keys) return;
+      const stale = keys.filter(k => { const m = /^([abd])(\d+)$/.exec(k); return m && (m[1] === "d" || (m[1] === slot && Number(m[2]) >= n)); });
+      if (stale.length) cs.del(stale);
+    });
     return true;
   },
-  cleanup(slot, n){
-    try {
-      tg.CloudStorage.getKeys((err, keys) => {
-        if (err || !keys) return;
-        const stale = keys.filter(k => { const m = /^([abd])(\d+)$/.exec(k); return m && (m[1] === "d" || (m[1] === slot && Number(m[2]) >= n)); });
-        if (stale.length) cs.del(stale);
-      });
-    } catch(e){}
-  },
   slot: null,
+  synced: null,   // updatedAt of the cloud copy we last merged with or wrote
 };
-let cloudTimer = null, cloudBusy = false, cloudAgain = false;
-function scheduleCloud(){
+
+let D = null, IDX = null, freshDevice = false;
+function setData(d){ D = d; IDX = null; takeSnap(); }
+{
+  const local = Store.loadLocal();
+  freshDevice = !local;
+  setData(normalize(local));
+}
+function commit(){
+  stampChanges();
+  D.updatedAt = Date.now(); IDX = null;
+  if (!Store.saveLocal(D) && !cloudOK()) toast("Не удалось сохранить: в браузере закончилось место");
+  scheduleSync();
+  render();
+}
+// Replace everything (demo, restore, reset): a new epoch tells other devices to drop their copy.
+function replaceAll(d){
+  const theme = D.settings.theme;
+  d = normalize(d); d.settings.theme = theme; d.epoch = Date.now(); d.del = {};
+  freshDevice = false;
+  setData(d); D.updatedAt = Date.now();
+  Store.saveLocal(D); scheduleSync(); applyTheme(); render();
+}
+
+/* ---------- sync ---------- */
+let syncTimer = null, syncBusy = false, syncAgain = false, syncState = "idle", retryMs = 0;
+function closingGuard(on){ try { if (ver("6.2")) on ? tg.enableClosingConfirmation() : tg.disableClosingConfirmation(); } catch(e){} }
+function scheduleSync(delay = 400){
   if (!cloudOK()) return;
-  try { ver("6.2") && tg.enableClosingConfirmation(); } catch(e){}
-  clearTimeout(cloudTimer);
-  cloudTimer = setTimeout(flushCloud, 350);
+  closingGuard(true);
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { syncTimer = null; sync(); }, delay);
 }
-async function flushCloud(){
-  if (cloudBusy) { cloudAgain = true; return; }
-  cloudBusy = true;
-  await Store.saveCloud(D);
-  cloudBusy = false;
-  if (cloudAgain) { cloudAgain = false; return flushCloud(); }
-  try { ver("6.2") && tg.disableClosingConfirmation(); } catch(e){}
+async function sync(){
+  if (!cloudOK()) return;
+  if (syncBusy) { syncAgain = true; return; }
+  syncBusy = true;
+  try {
+    const meta = await Store.meta();
+    if (meta && meta.updatedAt !== Store.synced) {
+      const remote = await Store.loadCloud(meta);
+      if (!remote) throw new Error("cloud copy unreadable");
+      const R = normalize(remote);
+      const merged = merge(D, R, freshDevice);
+      const same = JSON.stringify({ ...merged, updatedAt: 0 }) === JSON.stringify({ ...R, updatedAt: 0 });
+      merged.updatedAt = same ? R.updatedAt : Math.max(Date.now(), D.updatedAt, R.updatedAt + 1);
+      const changedHere = JSON.stringify(merged) !== JSON.stringify(D);
+      setData(merged);
+      Store.synced = R.updatedAt;
+      if (changedHere) { Store.saveLocal(D); applyTheme(); if (!sheetOpen) render(); else pendingRender = true; }
+    } else if (!meta) Store.synced = 0;
+    freshDevice = false;
+    if (D.updatedAt !== Store.synced && (D.updatedAt || meta)) {
+      if (!(await Store.saveCloud(D))) throw new Error("cloud write failed");
+      Store.synced = D.updatedAt;
+    }
+    syncState = "ok"; retryMs = 0;
+  } catch(e) {
+    syncState = "error";
+    retryMs = Math.min(60000, (retryMs || 2500) * 2);
+    setTimeout(sync, retryMs);
+  } finally {
+    syncBusy = false;
+  }
+  if (syncAgain) { syncAgain = false; return sync(); }
+  if (!syncTimer && syncState === "ok") closingGuard(false);
+  if (ui.tab === "more" && !sheetOpen) render();
 }
 
-let D = normalize(Store.loadLocal());
-function commit(){ D.updatedAt = Date.now(); Store.saveLocal(D); scheduleCloud(); render(); }
-
-/* ---------- derived ---------- */
-const cat = id => D.cats.find(c => c.id === id) || { id, name: "Без категории", emoji: "❔", type: "expense" };
-const catsOf = type => D.cats.filter(c => c.type === type);
-const monthTx = ym => D.tx.filter(t => t.date.startsWith(ym));
-function stats(ym){ let inc = 0, exp = 0; for (const t of monthTx(ym)) t.type === "income" ? inc += t.amount : exp += t.amount; return { inc, exp }; }
+/* ---------- derived (cached per month, rebuilt after each change) ---------- */
+const EMPTY_M = { tx: [], inc: 0, exp: 0, cats: new Map() };
+function idx(){
+  if (IDX) return IDX;
+  const m = new Map();
+  for (const t of D.tx) {
+    const ym = t.date.slice(0, 7);
+    let e = m.get(ym);
+    if (!e) m.set(ym, e = { tx: [], inc: 0, exp: 0, cats: new Map() });
+    e.tx.push(t);
+    if (t.type === "income") e.inc += t.amount;
+    else { e.exp += t.amount; e.cats.set(t.cat, (e.cats.get(t.cat) || 0) + t.amount); }
+  }
+  return IDX = m;
+}
+const txById = id => { const x = idx(); if (!x.txById) x.txById = new Map(D.tx.map(t => [t.id, t])); return x.txById.get(id); };
+const planTxIds = () => { const x = idx(); if (!x.planIds) { x.planIds = new Set(); for (const p of D.plans) for (const k in p.paid) x.planIds.add(p.paid[k]); } return x.planIds; };
+const baseFor = ym => D.settings.monthlyLimit > 0 ? D.settings.monthlyLimit : stats(ym).inc;
+const unpaidReserved = ym => D.plans.reduce((a, p) => a + (isPaid(p, ym) ? 0 : p.amount), 0);
+// Day budget at the start of a day and what was spent that day (planned payments were reserved, so they don't count).
+function dayInfo(dIso){
+  const ym = dIso.slice(0, 7), base = baseFor(ym);
+  if (base <= 0) return null;
+  const left = dim(ym) - Number(dIso.slice(8)) + 1, pids = planTxIds();
+  let before = 0, spent = 0;
+  for (const t of mEntry(ym).tx) if (t.type === "expense") {
+    if (t.date < dIso) before += t.amount;
+    else if (t.date === dIso && !pids.has(t.id)) spent += t.amount;
+  }
+  let reserved = 0;
+  for (const p of D.plans) { const pt = p.paid[ym] && txById(p.paid[ym]); if (!(pt && pt.date < dIso)) reserved += p.amount; }
+  return { allow: Math.max(0, (base - before - reserved) / left), spent };
+}
+const firstTxDate = () => { const x = idx(); if (x.first === undefined) x.first = D.tx.reduce((m, t) => !m || t.date < m ? t.date : m, null); return x.first; };
+function streak(){
+  const first = firstTxDate(); if (!first) return 0;
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  let n = 0;
+  for (let i = 0; i < 366; i++, d.setDate(d.getDate() - 1)) {
+    const s = iso(d); if (s < first) break;
+    const info = dayInfo(s);
+    if (!info || info.spent > info.allow + 0.5) break;
+    n++;
+  }
+  return n;
+}
+const yesterdayISO = () => { const d = new Date(); d.setDate(d.getDate() - 1); return iso(d); };
+const catMap = () => { if (!idx().catById) IDX.catById = new Map(D.cats.map(c => [c.id, c])); return IDX.catById; };
+const cat = id => catMap().get(id) || { id, name: "Без категории", emoji: "❔", type: "expense" };
+const catsOf = type => D.cats.filter(c => c.type === type && !c.system);
+const mEntry = ym => idx().get(ym) || EMPTY_M;
+const monthTx = ym => mEntry(ym).tx.slice();
+const stats = ym => { const e = mEntry(ym); return { inc: e.inc, exp: e.exp }; };
 const dueDay = (p, ym) => Math.min(p.day, dim(ym));
 const isPaid = (p, ym) => !!p.paid[ym];
-function spentBy(ym, cid){ let s = 0; for (const t of D.tx) if (t.type === "expense" && t.cat === cid && t.date.startsWith(ym)) s += t.amount; return s; }
+const spentBy = (ym, cid) => mEntry(ym).cats.get(cid) || 0;
 
 /* ---------- UI state ---------- */
 const ui = { tab: "home", month: curYM(), filter: "all", fcat: null, q: "", sel: null, animated: false };
@@ -493,7 +714,7 @@ function heroHtml(){
         </div>
         <div class="pace-row"><span>Потрачено <b class="num">${money(s.exp, {round:true})}</b></span><span>из <b class="num">${money(limit, {round:true})}</b></span></div>
       </div>
-      <span class="pace-note"><i></i>${note}</span>
+      <div class="hero-foot"><span class="pace-note"><i></i>${note}</span><button class="pace-note" data-act="canbuy">Могу ли купить?</button></div>
     </section>`;
   }
   if (ym < now) {
@@ -540,11 +761,9 @@ function upcomingHtml(){
 }
 
 function categoriesHtml(){
-  const ym = ui.month, map = new Map();
-  let total = 0;
-  for (const t of monthTx(ym)) if (t.type === "expense") { map.set(t.cat, (map.get(t.cat) || 0) + t.amount); total += t.amount; }
+  const ym = ui.month, e = mEntry(ym), total = e.exp;
   if (!total) return "";
-  const arr = [...map.entries()].sort((a,b) => b[1] - a[1]);
+  const arr = [...e.cats.entries()].sort((a,b) => b[1] - a[1]);
   const max = arr[0][1];
   return `<section class="sec">
     <div class="sec-h"><h2>Куда уходят деньги</h2></div>
@@ -613,6 +832,34 @@ function recentHtml(){
   </section>`;
 }
 
+function dayCardHtml(){
+  if (ui.month !== curYM()) return "";
+  const y = yesterdayISO(), first = firstTxDate();
+  if (!first || y < first) return "";
+  const info = dayInfo(y); if (!info) return "";
+  const left = Math.floor(info.allow - info.spent), st = streak();
+  const savedY = mEntry(y.slice(0, 7)).tx.reduce((a, t) => a + (t.goal && t.date === y ? t.amount : 0), 0);
+  let dismissed = ""; try { dismissed = localStorage.getItem("finplan:dayDismiss") || ""; } catch(e){}
+  const streakHtml = st >= 2 ? `<span class="streak">🔥 ${st} ${plural(st,"день","дня","дней")} подряд в бюджете</span>` : "";
+  let title, sub, acts = "";
+  if (left >= 1) {
+    title = `Вчера сэкономлено ${money(left, {round:true})}`;
+    sub = `Потрачено ${money(info.spent, {round:true})} из ${money(info.allow, {round:true})} на день.`;
+    if (dismissed !== y) acts = D.goals.length
+      ? `<div class="acts"><button class="pill" data-act="save-day" data-v="${left}">Отложить в цель</button><button class="pill ghost" data-act="day-dismiss">Оставить в бюджете</button></div>`
+      : `<div class="acts"><button class="pill" data-act="goal">Создать цель, чтобы копить</button></div>`;
+  } else if (savedY > 0 && info.spent <= info.allow + 0.5) {
+    title = `Вчера отложено в цель ${money(savedY, {round:true})}`;
+    sub = `Потрачено ${money(info.spent - savedY, {round:true})} из ${money(info.allow, {round:true})} на день, остаток в копилке.`;
+  } else if (info.spent > info.allow + 0.5) {
+    title = `Вчера перерасход ${money(info.spent - info.allow, {round:true})}`;
+    sub = "Сегодняшний бюджет на день уже это учитывает.";
+  } else {
+    title = "Вчера ровно в бюджете";
+    sub = `Потрачено ${money(info.spent, {round:true})} из ${money(info.allow, {round:true})}.`;
+  }
+  return `<section class="sec"><div class="panel day"><div class="t num">${title}</div><div class="s num">${sub}</div>${streakHtml}${acts}</div></section>`;
+}
 function viewHome(){
   if (!D.tx.length && !D.plans.length && !D.goals.length) {
     return `<header class="topbar"><h1>Финплан</h1></header>
@@ -623,7 +870,7 @@ function viewHome(){
       <div class="hero-actions"><button class="btn-hero" data-act="add">Добавить операцию</button><button class="btn-hero ghost" data-act="demo">Посмотреть на примере</button></div>
     </section>`;
   }
-  return monthBar() + heroHtml() + splitHtml() + upcomingHtml() + categoriesHtml() + trendHtml() + recentHtml();
+  return monthBar() + heroHtml() + splitHtml() + dayCardHtml() + upcomingHtml() + categoriesHtml() + trendHtml() + recentHtml();
 }
 
 function opsList(){
@@ -713,13 +960,17 @@ function viewMore(){
   const th = (v, l) => `<button data-act="theme" data-v="${v}" aria-pressed="${D.settings.theme === v}">${l}</button>`;
   const cur = c => `<button data-act="currency" data-v="${c}" aria-pressed="${D.settings.currency === c}">${c}</button>`;
   const cloud = cloudOK();
+  const syncText = !cloud ? "Данные хранятся только на этом устройстве"
+    : syncState === "error" ? "Нет связи с облаком Telegram. Данные сохранены на устройстве, синхронизируем позже"
+    : "Данные синхронизируются через облако Telegram";
   return `<header class="topbar"><h1>Настройки</h1></header>
   <section class="sec">
     <div class="panel">
       <div class="set-row"><span>Тема</span><div class="seg" style="flex:0 1 250px">${th("auto", IN_TG ? "Как в TG" : "Авто")}${th("light","Светлая")}${th("dark","Тёмная")}</div></div>
       <div class="set-row"><span>Валюта</span><div class="seg" style="flex:0 1 250px">${cur("₽")}${cur("$")}${cur("€")}${cur("₸")}${cur("Br")}</div></div>
       <button class="set-row" data-act="limit"><span>Лимит расходов на месяц</span><span class="v num">${D.settings.monthlyLimit ? money(D.settings.monthlyLimit, {round:true}) : "Не задан"}</span></button>
-      <button class="set-row" data-act="cats"><span>Категории</span><span class="v">${D.cats.length}</span></button>
+      <button class="set-row" data-act="cats"><span>Категории</span><span class="v">${catsOf("expense").length + catsOf("income").length}</span></button>
+      ${bioUsable() ? `<button class="set-row" data-act="lock-toggle" role="switch" aria-checked="${lockOn()}"><span>Вход по ${bioName()}</span><span class="switch" aria-checked="${lockOn()}"></span></button>` : ""}
     </div>
   </section>
   <section class="sec">
@@ -730,15 +981,21 @@ function viewMore(){
       <button class="set-row" data-act="demo"><span>Заполнить примером</span><span class="v">Демо</span></button>
       <button class="set-row danger" data-act="reset">Удалить все данные</button>
     </div>
-    <div class="sync"><i class="${cloud ? "" : "off"}"></i>${cloud ? "Данные синхронизируются через облако Telegram" : "Данные хранятся только на этом устройстве"}</div>
+    <div class="sync"><i class="${!cloud ? "off" : syncState === "error" ? "err" : ""}"></i>${syncText}</div>
   </section>`;
 }
 
 /* ---------- render ---------- */
+let pendingRender = false;
 function render(){
   const app = $("#app");
   const views = { home: viewHome, ops: viewOps, plans: viewPlans, more: viewMore };
-  app.innerHTML = views[ui.tab]();
+  pendingRender = false;
+  try { app.innerHTML = (views[ui.tab] || viewHome)(); }
+  catch(e) {
+    console.error(e);
+    app.innerHTML = `<div class="panel pad" style="margin-top:20px">Не получилось показать этот экран. <button class="link" style="color:var(--accent);font-weight:700" data-act="tab" data-tab="home">Вернуться на главную</button></div>`;
+  }
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-current", b.dataset.tab === ui.tab ? "page" : "false"));
   syncBackButton();
   if (!ui.animated) { ui.animated = true; countUp(); }
@@ -753,8 +1010,9 @@ function countUp(){
 
 /* ---------- sheet ---------- */
 let sheetOpen = false, sheetCtx = null;
-function openSheet(title, html, ctx){
+function openSheet(title, html, ctx, extra){
   $("#sheetTitle").textContent = title;
+  $("#sheetExtra").innerHTML = extra || "";
   $("#sheetBody").innerHTML = html;
   $("#sheetBody").scrollTop = 0;
   sheetCtx = ctx || null;
@@ -764,6 +1022,7 @@ function openSheet(title, html, ctx){
 }
 function closeSheet(){
   sheetOpen = false; sheetCtx = null;
+  if (pendingRender) render();
   $("#overlay").classList.remove("on"); $("#sheet").classList.remove("on");
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   syncBackButton();
@@ -777,17 +1036,62 @@ function confirmSheet(title, text, okLabel, onOk){
   openSheet(title, `<p class="confirm-text">${text}</p><button class="btn danger" data-act="confirm-ok">${okLabel}</button><button class="btn soft" data-act="close-sheet">Отмена</button>`, { onOk });
 }
 let toastT;
-function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2000); }
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.toggle("top", sheetOpen); t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2000); }
 
 /* ---------- transaction sheet ---------- */
 let form = null;
-function lastCat(type){ const t = [...D.tx].filter(x => x.type === type).sort(sortTx)[0]; return t ? t.cat : (catsOf(type)[0] || {}).id; }
-function openTx(tx, presetType){
+function lastCat(type){
+  let best = null;
+  for (const t of D.tx) if (t.type === type && (!best || sortTx(t, best) < 0)) best = t;
+  return best && catMap().has(best.cat) ? best.cat : (catsOf(type)[0] || {}).id;
+}
+const SCAN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10"/></svg>';
+const amountStr = v => (Math.round(v * 100) % 100 ? v.toFixed(2) : String(Math.round(v))).replace(".", ",");
+const canScan = () => MOBILE && ver("6.4") && typeof tg.showScanQrPopup === "function";
+function openTx(tx, presetType, prefill){
   const type = tx ? tx.type : (presetType || "expense");
-  form = tx ? { id: tx.id, type, amount: String(tx.amount).replace(".", ","), cat: tx.cat, date: tx.date, note: tx.note || "" }
-            : { id: null, type, amount: "", cat: lastCat(type), date: defaultDate(), note: "" };
-  openSheet(tx ? "Операция" : "Новая операция", txSheetHtml(), { kind: "tx" });
+  form = tx ? { id: tx.id, type, amount: amountStr(tx.amount), cat: tx.cat, date: tx.date, note: tx.note || "", goal: tx.goal || null }
+            : { id: null, type, amount: "", cat: lastCat(type), date: defaultDate(), note: "", ...(prefill || {}) };
+  const extra = !tx && canScan() ? `<button class="scan" data-act="scan">${SCAN_ICON}Чек</button>` : "";
+  openSheet(tx ? "Операция" : "Новая операция", txSheetHtml(), { kind: "tx" }, extra);
   showSelCat();
+}
+// Russian fiscal receipt QR: t=20261119T1830&s=1250.00&fn=…&i=…&fp=…&n=1
+function parseReceipt(text){
+  const raw = String(text || "").trim();
+  const q = new URLSearchParams(raw.includes("?") ? raw.slice(raw.indexOf("?") + 1) : raw);
+  const t = q.get("t"), sum = q.get("s");
+  if (!t || !sum) return null;
+  const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/.exec(t);
+  if (!m) return null;
+  const date = `${m[1]}-${m[2]}-${m[3]}`, amount = parseAmount(sum);
+  if (!okDate(date) || !(amount > 0)) return null;
+  const n = q.get("n");
+  return { amount: Math.min(MAX_AMOUNT, amount), date, refund: n === "2", time: m[4] ? `${m[4]}:${m[5]}` : "",
+           key: [q.get("fn"), q.get("i"), q.get("fp")].join("-") };
+}
+function scanReceipt(){
+  if (!canScan()) return;
+  try {
+    tg.showScanQrPopup({ text: "Наведите камеру на QR-код чека" }, text => {
+      const r = parseReceipt(text);
+      if (!r) { haptic.warn(); return false; }            // keep scanning: not a receipt code
+      setTimeout(() => applyReceipt(r), 0);
+      return true;
+    });
+  } catch(e) { toast("Камера недоступна"); }
+}
+function applyReceipt(r){
+  haptic.ok();
+  if (r.key !== "--" && D.tx.some(t => t.rc === r.key)) { toast("Этот чек уже добавлен"); return; }
+  const type = r.refund ? "income" : "expense";
+  const [, mo, d] = r.date.split("-").map(Number);
+  openTx(null, type, {
+    amount: amountStr(r.amount), date: r.date, rc: r.key !== "--" ? r.key : null,
+    note: r.refund ? "Возврат по чеку" : `Чек от ${d} ${MONTHS_GEN[mo - 1]}${r.time ? ", " + r.time : ""}`,
+  });
+  refreshTxSheet();
+  toast(r.refund ? "Возврат по чеку: выберите категорию" : "Сумма из чека. Выберите категорию");
 }
 function defaultDate(){ const ym = ui.month; return ym === curYM() ? todayISO() : `${ym}-${pad(Math.min(15, dim(ym)))}`; }
 function txSheetHtml(){
@@ -825,6 +1129,7 @@ function refreshTxSheet(){
   save.textContent = form.id ? "Сохранить" : !(v > 0) ? "Введите сумму" : form.type === "expense" ? "Добавить расход" : "Добавить доход";
 }
 function pressKey(k){
+  if (!form) return;
   let a = form.amount;
   if (k === "⌫") a = a.slice(0, -1);
   else if (k === ",") { if (!a.includes(",")) a = (a || "0") + ","; }
@@ -846,6 +1151,35 @@ function catPicker(type, sel, name){
 const picked = () => { const b = document.querySelector('#sheetBody .cats button[aria-pressed="true"]'); return b ? b.dataset.id : null; };
 const pickedEmoji = () => { const b = document.querySelector('#sheetBody .emojis button[aria-pressed="true"]'); return b ? b.dataset.v : null; };
 
+function openCanBuy(){
+  openSheet("Могу ли я купить?", `
+    ${amountField("cbAmt", "Сколько стоит покупка", "")}
+    <div id="cbRes"><p class="confirm-text">Введите цену. Я посчитаю, как покупка повлияет на бюджет до конца месяца.</p></div>`, { kind: "canbuy" });
+  setTimeout(() => { const i = $("#cbAmt"); i && i.focus(); }, 320);
+}
+function canBuyHtml(price){
+  if (!(price > 0)) return `<p class="confirm-text">Введите цену. Я посчитаю, как покупка повлияет на бюджет до конца месяца.</p>`;
+  const ym = curYM(), base = baseFor(ym);
+  if (base <= 0) return `<div class="verdict"><div class="t">Нужна точка отсчёта</div><div class="s">Задайте месячный лимит или добавьте доход за этот месяц, и я смогу посчитать.</div></div>`;
+  const left = dim(ym) - new Date().getDate() + 1;
+  const rest = base - stats(ym).exp - unpaidReserved(ym), per = Math.max(0, rest) / left, after = rest - price;
+  const record = `<button class="btn soft" data-act="canbuy-record" data-v="${price}">Купил, записать расход</button>`;
+  if (after >= 0) {
+    const np = after / left, ratio = per > 0 ? np / per : 0;
+    const cls = ratio >= .7 ? "ok" : "warn";
+    const t = ratio >= .7 ? "Да, можно" : "Можно, но придётся экономить";
+    return `<div class="verdict ${cls}"><div class="t">${t}</div><div class="s num">До конца месяца останется ${money(np, {round:true})} в день вместо ${money(per, {round:true})}.</div></div>${record}`;
+  }
+  const next = addMonths(ym, 1), nb = D.settings.monthlyLimit;
+  let tip = "";
+  if (nb > 0) {
+    const nRest = nb - D.plans.reduce((a, p) => a + p.amount, 0) - price;
+    tip = nRest > 0 ? ` В ${MONTHS_PREP[mIdx(next)]} получится: после покупки и всех платежей останется ${money(nRest / dim(next), {round:true})} в день.`
+                    : " Даже в следующем месяце лимита не хватит. Возможно, стоит завести на неё цель.";
+  } else tip = " Можно завести цель и откладывать на неё.";
+  return `<div class="verdict no"><div class="t">В этом месяце не уложиться</div><div class="s num">Не хватает ${money(-after, {round:true})}.${tip}</div></div>
+    <button class="btn soft" data-act="canbuy-goal" data-v="${price}">Сделать целью</button>`;
+}
 function openLimit(){
   openSheet("Лимит на месяц", `
     <p class="confirm-text">Сколько вы готовы тратить за месяц. Из этой суммы считается дневной бюджет. Оставьте пустым, чтобы считать от доходов.</p>
@@ -933,6 +1267,11 @@ function demoData(){
     if (last >= 20) add("income", "side", 14000 + Math.round(rnd() * 4) * 1000, day(20), "Подработка");
     if (last >= 25) add("income", "grant", 3500, day(25), "Стипендия");
     for (let i = 1; i <= last; i++) {
+      if (k === 0 && i >= today - 5 && i < today) {        // a frugal last week, so the streak and savings show up
+        if (rnd() < .6) add("expense", "food", 200 + rnd() * 250, day(i));
+        add("expense", "transport", 46, day(i), "Автобус");
+        continue;
+      }
       if (rnd() < .45) add("expense", "food", 300 + rnd() * 1500, day(i), rnd() < .3 ? "Магнит" : "");
       if (rnd() < .3) add("expense", "cafe", 180 + rnd() * 600, day(i), rnd() < .5 ? "Кофе с собой" : "");
       if (rnd() < .35) add("expense", "transport", 46 + Math.round(rnd()) * 46, day(i), "Автобус");
@@ -971,7 +1310,7 @@ function demoData(){
 }
 
 /* ---------- actions ---------- */
-function readAmt(id){ const el = $("#" + id); return el ? parseAmount(el.value) : 0; }
+function readAmt(id){ const el = $("#" + id); return el ? Math.min(MAX_AMOUNT, Math.max(0, parseAmount(el.value))) : 0; }
 function setPressed(btn){ btn.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === btn))); }
 
 const A = {
@@ -991,21 +1330,32 @@ const A = {
   "tx-date": el => { form.date = el.dataset.v; rerenderTx(); },
   "key": el => pressKey(el.dataset.k),
   "tx-save": () => {
-    const v = parseAmount(form.amount); if (!(v > 0) || !form.cat) return;
+    if (!form) return;
+    const v = Math.min(MAX_AMOUNT, parseAmount(form.amount)); if (!(v > 0) || !form.cat) return;
     form.note = ($("#txNote").value || "").trim();
-    if (form.id) { const t = D.tx.find(x => x.id === form.id); Object.assign(t, { type: form.type, amount: v, cat: form.cat, date: form.date, note: form.note }); }
-    else D.tx.push({ id: uid(), type: form.type, amount: v, cat: form.cat, date: form.date, note: form.note, ts: Date.now() });
-    const ym = form.date.slice(0, 7), wasEdit = !!form.id;
-    closeSheet(); haptic.ok();
+    const t = form.id && D.tx.find(x => x.id === form.id);
+    if (t) {
+      if (t.goal) { const g = D.goals.find(x => x.id === t.goal); if (g) g.saved = money2(g.saved + v - t.amount); }
+      Object.assign(t, { type: form.type, amount: v, cat: form.cat, date: form.date, note: form.note });
+    } else {
+      const nt = { id: uid(), type: form.type, amount: v, cat: form.cat, date: form.date, note: form.note, ts: Date.now() };
+      if (form.rc) nt.rc = form.rc;
+      D.tx.push(nt);
+    }
+    const ym = form.date.slice(0, 7), wasEdit = !!form.id, type = form.type;
+    form = null; closeSheet(); haptic.ok();
     if (ym !== ui.month) ui.month = ym;
-    commit(); toast(wasEdit ? "Сохранено" : form.type === "expense" ? "Расход добавлен" : "Доход добавлен");
+    commit(); toast(wasEdit ? "Сохранено" : type === "expense" ? "Расход добавлен" : "Доход добавлен");
   },
-  "tx-del": () => { const id = form.id; confirmSheet("Удалить операцию?", "Её нельзя будет вернуть.", "Удалить", () => {
+  "tx-del": () => { if (!form) return; const id = form.id, isGoal = !!form.goal; form = null;
+    confirmSheet("Удалить операцию?", isGoal ? "Сумма вернётся из цели в бюджет." : "Её нельзя будет вернуть.", "Удалить", () => {
+    const old = D.tx.find(t => t.id === id);
+    if (old && old.goal) { const g = D.goals.find(x => x.id === old.goal); if (g) g.saved = money2(g.saved - old.amount); }
     D.tx = D.tx.filter(t => t.id !== id);
     D.plans.forEach(p => { for (const k in p.paid) if (p.paid[k] === id) delete p.paid[k]; });
     haptic.warn(); commit(); toast("Операция удалена"); }); },
   "pay": el => {
-    const p = D.plans.find(x => x.id === el.dataset.id); if (!p) return;
+    const p = D.plans.find(x => x.id === el.dataset.id); if (!p || isPaid(p, ui.month)) return;
     const ym = ui.month, date = ym === curYM() ? todayISO() : `${ym}-${pad(dueDay(p, ym))}`, id = uid();
     D.tx.push({ id, type: "expense", cat: p.cat, amount: p.amount, date, note: p.name, ts: Date.now() });
     p.paid[ym] = id; haptic.ok(); commit(); toast(`«${p.name}» оплачен`);
@@ -1013,9 +1363,23 @@ const A = {
   "unpay": el => {
     const p = D.plans.find(x => x.id === el.dataset.id); if (!p) return;
     confirmSheet("Отменить оплату?", `Платёж «${esc(p.name)}» снова станет неоплаченным, а связанная операция удалится.`, "Отменить оплату", () => {
-      const tid = p.paid[ui.month]; D.tx = D.tx.filter(t => t.id !== tid); delete p.paid[ui.month]; commit(); });
+      const ym = ui.month, tid = p.paid[ym]; D.tx = D.tx.filter(t => t.id !== tid); delete p.paid[ym]; commit(); });
   },
   "limit": () => openLimit(),
+  "scan": () => scanReceipt(),
+  "canbuy": () => { haptic.tap(); openCanBuy(); },
+  "canbuy-record": el => { const v = Number(el.dataset.v); closeSheet(); setTimeout(() => { openTx(null, "expense", { amount: amountStr(v) }); refreshTxSheet(); }, 60); },
+  "canbuy-goal": el => { const v = Number(el.dataset.v); openGoal(); const t = $("#glTarget"); if (t) t.value = String(v).replace(".", ","); },
+  "save-day": el => {
+    const v = Number(el.dataset.v);
+    if (D.goals.length === 1) return saveDayTo(D.goals[0].id, v);
+    openSheet(`Отложить ${money(v, {round:true})}`, `<p class="confirm-text">В какую цель?</p><div class="panel" style="box-shadow:none;background:var(--surface-2)">${D.goals.map(g =>
+      `<button class="row" data-act="save-day-to" data-id="${g.id}" data-v="${v}"><div class="emo">${esc(g.emoji)}</div><div class="mid"><div class="t">${esc(g.name)}</div><div class="s num">${money(g.saved, {round:true})} из ${money(g.target, {round:true})}</div></div></button>`).join("")}</div>`, { kind: "saveday" });
+  },
+  "save-day-to": el => saveDayTo(el.dataset.id, Number(el.dataset.v)),
+  "day-dismiss": () => { try { localStorage.setItem("finplan:dayDismiss", yesterdayISO()); } catch(e){} render(); },
+  "lock-toggle": () => toggleLock(),
+  "unlock": () => { if (bioUsable()) authenticate(); else unlock(); },
   "limit-save": () => { D.settings.monthlyLimit = readAmt("limitIn"); closeSheet(); haptic.ok(); commit(); toast(D.settings.monthlyLimit ? "Лимит сохранён" : "Лимит убран"); },
   "limit-clear": () => { D.settings.monthlyLimit = 0; closeSheet(); commit(); toast("Лимит убран"); },
   "pick": el => { setPressed(el); haptic.sel(); },
@@ -1027,6 +1391,7 @@ const A = {
     const c = picked(), v = readAmt("budIn");
     if (!c) return toast("Выберите категорию");
     if (!(v > 0)) return toast("Укажите сумму");
+    if (!sheetCtx) return;
     if (sheetCtx.id && sheetCtx.id !== c) delete D.budgets[sheetCtx.id];
     D.budgets[c] = v; closeSheet(); haptic.ok(); commit();
   },
@@ -1041,8 +1406,8 @@ const A = {
     if (!dayBtn) return toast("Выберите число");
     if (!c) return toast("Выберите категорию");
     const data = { name, amount, day: Number(dayBtn.dataset.v), cat: c };
-    if (sheetCtx.id) Object.assign(D.plans.find(p => p.id === sheetCtx.id), data);
-    else D.plans.push({ id: uid(), paid: {}, ...data });
+    const ex = sheetCtx && sheetCtx.id && D.plans.find(p => p.id === sheetCtx.id);
+    if (ex) Object.assign(ex, data); else D.plans.push({ id: uid(), paid: {}, ...data });
     closeSheet(); haptic.ok(); commit();
   },
   "plan-del": () => { const id = sheetCtx.id; confirmSheet("Удалить платёж?", "Уже записанные оплаты останутся в операциях.", "Удалить", () => { D.plans = D.plans.filter(p => p.id !== id); commit(); }); },
@@ -1051,9 +1416,10 @@ const A = {
     const name = $("#glName").value.trim(), target = readAmt("glTarget"), saved = readAmt("glSaved");
     if (!name) return toast("Назовите цель");
     if (!(target > 0)) return toast("Укажите нужную сумму");
-    const data = { name, target, saved, emoji: pickedEmoji() || "🎯", deadline: $("#glDl").value || "" };
-    if (sheetCtx.id) Object.assign(D.goals.find(g => g.id === sheetCtx.id), data);
-    else D.goals.push({ id: uid(), ...data });
+    const dl = $("#glDl").value;
+    const data = { name, target, saved, emoji: pickedEmoji() || "🎯", deadline: okYM(dl) ? dl : "" };
+    const ex = sheetCtx && sheetCtx.id && D.goals.find(g => g.id === sheetCtx.id);
+    if (ex) Object.assign(ex, data); else D.goals.push({ id: uid(), ...data });
     closeSheet(); haptic.ok(); commit();
   },
   "goal-del": () => { const id = sheetCtx.id; confirmSheet("Удалить цель?", "Прогресс по ней не сохранится.", "Удалить", () => { D.goals = D.goals.filter(g => g.id !== id); commit(); }); },
@@ -1091,19 +1457,28 @@ const A = {
   },
   "restore": () => openRestore(),
   "restore-go": () => {
-    try { const d = JSON.parse($("#rsTxt").value); if (!d || !Array.isArray(d.tx)) throw 0; D = normalize(d); closeSheet(); applyTheme(); commit(); toast("Данные восстановлены"); haptic.ok(); }
+    try { const d = JSON.parse($("#rsTxt").value.trim()); if (!d || !Array.isArray(d.tx)) throw 0; closeSheet(); replaceAll(d); toast("Данные восстановлены"); haptic.ok(); }
     catch(e) { toast("Это не похоже на резервную копию Финплана"); haptic.warn(); }
   },
   "demo": () => {
-    const go = () => { D = demoData(); ui.month = curYM(); ui.tab = "home"; ui.animated = false; commit(); window.scrollTo(0,0); toast("Пример загружен"); };
+    const go = () => { ui.month = curYM(); ui.tab = "home"; ui.animated = false; replaceAll(demoData()); window.scrollTo(0,0); toast("Пример загружен"); };
     (D.tx.length || D.plans.length || D.goals.length) ? confirmSheet("Заменить данные примером?", "Все ваши текущие записи будут удалены.", "Заменить", go) : go();
   },
   "reset": () => confirmSheet("Удалить все данные?", "Операции, планы и цели будут удалены без возможности вернуть.", "Удалить всё", () => {
-    const theme = D.settings.theme; D = blank(); D.settings.theme = theme; ui.tab = "home"; ui.month = curYM(); commit(); toast("Данные удалены"); }),
+    ui.tab = "home"; ui.month = curYM(); replaceAll(blank()); toast("Данные удалены"); }),
 };
 function rerenderTx(){ form.note = ($("#txNote") || {}).value || form.note; $("#sheetBody").innerHTML = txSheetHtml(); showSelCat(); refreshTxSheet(); }
+function saveDayTo(goalId, amount){
+  const g = D.goals.find(x => x.id === goalId); if (!g || !(amount > 0)) return;
+  const y = yesterdayISO();
+  D.tx.push({ id: uid(), type: "expense", cat: "savings", amount, date: y, note: `В цель «${g.name}»`, goal: g.id, ts: Date.now() });
+  g.saved = money2(g.saved + amount);
+  closeSheet(); haptic.ok(); commit();
+  toast(g.saved >= g.target ? `Цель «${g.name}» достигнута!` : `${money(amount, {round:true})} отложено в «${g.name}»`);
+}
 function moveGoal(dir){
-  const g = D.goals.find(x => x.id === sheetCtx.id), v = readAmt("mvAmt");
+  const g = sheetCtx && D.goals.find(x => x.id === sheetCtx.id), v = readAmt("mvAmt");
+  if (!g) return closeSheet();
   if (!(v > 0)) return toast("Укажите сумму");
   g.saved = Math.max(0, Math.round((g.saved + dir * v) * 100) / 100);
   closeSheet(); haptic.ok(); commit();
@@ -1113,14 +1488,21 @@ function moveGoal(dir){
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-act]");
   if (!el) return;
+  if (!sheetOpen && el.closest("#sheet")) return;
+  if (document.documentElement.classList.contains("locked") && el.dataset.act !== "unlock") return;
   const fn = A[el.dataset.act];
-  if (fn) { e.preventDefault(); fn(el, e); }
+  if (!fn) return;
+  e.preventDefault();
+  try { const r = fn(el, e); if (r && r.catch) r.catch(err => { console.error(err); toast("Что-то пошло не так. Попробуйте ещё раз"); }); }
+  catch(err) { console.error(err); toast("Что-то пошло не так. Попробуйте ещё раз"); render(); }
 });
+let qTimer;
 document.addEventListener("input", e => {
-  if (e.target.id === "q") { ui.q = e.target.value; $("#opsList").innerHTML = opsList(); }
+  if (e.target.id === "cbAmt") { const r = $("#cbRes"); if (r) r.innerHTML = canBuyHtml(Math.min(MAX_AMOUNT, parseAmount(e.target.value))); return; }
+  if (e.target.id === "q") { ui.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(() => { const l = $("#opsList"); if (l) l.innerHTML = opsList(); }, 120); }
 });
 document.addEventListener("change", e => {
-  if (e.target.id === "txDate" && e.target.value) { form.date = e.target.value; rerenderTx(); }
+  if (e.target.id === "txDate" && form && okDate(e.target.value)) { form.date = e.target.value; rerenderTx(); }
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && sheetOpen) closeSheet();
@@ -1156,24 +1538,99 @@ function setupTelegram(){
   try { tg.expand(); } catch(e){}
   if (MOBILE && ver("8.0") && !tg.isFullscreen) { try { tg.requestFullscreen(); } catch(e){} }
   try { ver("7.7") && tg.disableVerticalSwipes(); } catch(e){}
-  try { ver("8.0") && tg.lockOrientation && tg.lockOrientation(); } catch(e){}
+  try { ver("8.0") && innerHeight > innerWidth && tg.lockOrientation(); } catch(e){}
   applyInsets();
-  for (const ev of ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged", "viewportChanged"]) { try { tg.onEvent(ev, applyInsets); } catch(e){} }
+  for (const ev of ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged"]) { try { tg.onEvent(ev, applyInsets); } catch(e){} }
+  try { tg.onEvent("activated", onResume); } catch(e){}
   try { tg.onEvent("themeChanged", () => D.settings.theme === "auto" && applyTheme()); } catch(e){}
   try { ver("6.1") && tg.BackButton.onClick(onBack); } catch(e){}
 }
 
+/* ---------- biometric lock (Face ID / fingerprint) ---------- */
+const LOCK_KEY = "finplan:lock";
+const bio = { mgr: null, ready: false };
+const lockOn = () => { try { return localStorage.getItem(LOCK_KEY) === "1"; } catch(e){ return false; } };
+const setLockOn = v => { try { v ? localStorage.setItem(LOCK_KEY, "1") : localStorage.removeItem(LOCK_KEY); } catch(e){} };
+const bioName = () => { const t = bio.mgr && bio.mgr.biometricType; return t === "face" ? "Face ID" : t === "finger" ? "отпечатку пальца" : "биометрии"; };
+const bioUsable = () => !!(bio.mgr && bio.mgr.isBiometricAvailable);
+function bioInit(){
+  if (!IN_TG || !ver("7.2") || !tg.BiometricManager) { bio.ready = true; unlock(); return; }
+  bio.mgr = tg.BiometricManager;
+  const done = () => {
+    bio.ready = true;
+    if (lockOn()) {
+      if (!bioUsable() || !bio.mgr.isAccessGranted) { setLockOn(false); unlock(); toast("Вход по биометрии выключен: нет доступа"); }
+      else authenticate();
+    }
+    if (ui.tab === "more" && !sheetOpen) render();
+  };
+  try { bio.mgr.isInited ? done() : bio.mgr.init(done); } catch(e){ bio.ready = true; unlock(); }
+}
+function lockNow(){ document.documentElement.classList.add("locked"); closeSheet(); }
+function unlock(){ document.documentElement.classList.remove("locked"); }
+function authenticate(){
+  $("#lockText").textContent = "Подтвердите вход, чтобы увидеть свои финансы.";
+  try {
+    bio.mgr.authenticate({ reason: "Вход в Финплан" }, ok => {
+      if (ok) { unlock(); haptic.ok(); }
+      else { haptic.warn(); $("#lockText").textContent = "Не получилось подтвердить. Попробуйте ещё раз."; }
+    });
+  } catch(e){ $("#lockText").textContent = "Не получилось подтвердить. Попробуйте ещё раз."; }
+}
+function toggleLock(){
+  if (!bioUsable()) return;
+  if (lockOn()) { setLockOn(false); render(); toast("Вход по " + bioName() + " выключен"); return; }
+  const enable = () => bio.mgr.authenticate({ reason: "Включить вход по " + bioName() }, ok => {
+    if (ok) { setLockOn(true); haptic.ok(); render(); toast("Вход по " + bioName() + " включён"); }
+  });
+  if (bio.mgr.isAccessGranted) return enable();
+  if (bio.mgr.isAccessRequested) {
+    return confirmSheet("Нужен доступ", "Разрешите Финплану использовать " + (bioName() === "Face ID" ? "Face ID" : "биометрию") + " в настройках Telegram.", "Открыть настройки", () => { try { bio.mgr.openSettings(); } catch(e){} });
+  }
+  bio.mgr.requestAccess({ reason: "Чтобы никто, кроме вас, не открыл ваши финансы" }, granted => { if (granted) enable(); });
+}
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") hiddenAt = Date.now();
+  else if (lockOn() && bio.ready && bioUsable() && hiddenAt && Date.now() - hiddenAt > 60000) { lockNow(); authenticate(); }
+});
+
+/* ---------- no zoom ---------- */
+// iOS ignores user-scalable=no, so pinch and double-tap zoom are blocked here as well.
+for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+document.addEventListener("touchmove", e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+let lastTouchEnd = 0, touchX = 0, touchY = 0, touchMoved = false;
+document.addEventListener("touchstart", e => { const t = e.touches[0]; touchX = t.clientX; touchY = t.clientY; touchMoved = false; }, { passive: true });
+document.addEventListener("touchmove", e => { const t = e.touches[0]; if (t && Math.hypot(t.clientX - touchX, t.clientY - touchY) > 10) touchMoved = true; }, { passive: true });
+document.addEventListener("touchend", e => {
+  const now = Date.now();
+  if (touchMoved) { lastTouchEnd = 0; return; }
+  if (now - lastTouchEnd < 300 && !e.target.closest("input, textarea")) {
+    e.preventDefault();
+    const el = e.target.closest("[data-act], label, button");
+    if (el) el.click();      // keep fast repeated taps working (keypad), just without zoom
+  }
+  lastTouchEnd = now;
+}, { passive: false });
+document.addEventListener("dblclick", e => e.preventDefault(), { passive: false });
+document.addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && ["+", "=", "-", "0"].includes(e.key)) e.preventDefault(); });
+document.addEventListener("contextmenu", e => { if (!e.target.closest("input, textarea")) e.preventDefault(); });
+
 /* ---------- boot ---------- */
+let lastYM = curYM();
+function onResume(){
+  const now = curYM();
+  if (now !== lastYM) { if (ui.month === lastYM) ui.month = now; lastYM = now; if (!sheetOpen) render(); }
+  sync();
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") onResume(); });
+window.addEventListener("unhandledrejection", e => console.warn(e.reason));
 setupTelegram();
 applyTheme();
 render();
-if (cloudOK()) {
-  Store.loadCloud().then(cloud => {
-    if (cloud && (!D.updatedAt || (cloud.updatedAt || 0) > D.updatedAt)) {
-      D = normalize(cloud); Store.saveLocal(D); applyTheme(); render();
-    } else if (D.updatedAt) scheduleCloud();
-  });
-}
+bioInit();
+sync();
 })();
 </script>
 </body>
