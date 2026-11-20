@@ -44,7 +44,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjus
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 svg,img{-webkit-user-drag:none;user-select:none}
 input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;font-size:16px}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
 body{min-height:100vh;min-height:100dvh}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation}
 input,textarea,select{font:inherit;color:inherit;font-size:16px}
@@ -142,7 +142,7 @@ button.row:active{background:var(--surface-2)}
 .search{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:var(--r-sm);padding:0 14px;height:46px;box-shadow:var(--shadow);margin-bottom:12px}
 .search svg{width:18px;height:18px;color:var(--muted);flex:none}
 .search input{flex:1;border:0;background:none;outline:none;height:100%;min-width:0}
-.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 16px;padding:0 16px}
+.chips{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin:0 -16px 16px;padding:0 16px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;padding:8px 14px;border-radius:999px;background:var(--surface);font-weight:700;font-size:14px;color:var(--ink-2);box-shadow:var(--shadow);white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -189,6 +189,8 @@ button.set-row:active{background:var(--surface-2)}
 
 /* bottom nav */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(var(--bottom-inset) + 6px)}
+/* when iOS bounces the page, the bar lifts a little: this white extension fills the space under it */
+.nav::after{content:"";position:absolute;left:0;right:0;top:100%;height:240px;background:var(--surface);pointer-events:none}
 .nav-in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 76px 1fr 1fr;align-items:center}
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;font-weight:700;color:var(--muted)}
 .tab svg{width:24px;height:24px}
@@ -198,7 +200,7 @@ button.set-row:active{background:var(--surface-2)}
 .fab:active{transform:translateY(-10px) scale(.94)}
 
 /* sheet */
-.overlay{position:fixed;inset:0;z-index:40;background:var(--overlay);opacity:0;transition:opacity .22s ease;pointer-events:none}
+.overlay{position:fixed;inset:0;z-index:40;touch-action:none;background:var(--overlay);opacity:0;transition:opacity .22s ease;pointer-events:none}
 .overlay.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:520px;margin:0 auto;background:var(--surface);border-radius:28px 28px 0 0;max-height:calc(100% - var(--top-inset) - 24px);display:flex;flex-direction:column;transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
 .sheet{visibility:hidden;pointer-events:none;transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s linear .32s}
@@ -206,7 +208,7 @@ button.set-row:active{background:var(--surface-2)}
 .sheet .grab{width:40px;height:5px;border-radius:5px;background:var(--line);margin:8px auto 0;flex:none}
 .sheet .sh{display:flex;align-items:center;justify-content:space-between;padding:10px 20px 6px;flex:none}
 .sheet .sh h3{margin:0;font-family:var(--display);font-weight:500;font-size:18px}
-.sheet .body{overflow-y:auto;padding:8px 20px calc(var(--bottom-inset) + 18px);-webkit-overflow-scrolling:touch}
+.sheet .body{overflow-y:auto;overscroll-behavior-y:contain;padding:8px 20px calc(var(--bottom-inset) + 18px);-webkit-overflow-scrolling:touch}
 .field{margin-bottom:16px}
 .field > label, .field > .lbl{display:block;font-size:13px;font-weight:700;color:var(--ink-2);margin:0 2px 6px}
 .input{width:100%;height:50px;border-radius:var(--r-sm);border:1.5px solid var(--line);background:var(--surface-2);padding:0 14px;outline:none}
@@ -224,7 +226,7 @@ textarea.input{height:150px;padding:12px 14px;resize:none;font-size:16px;font-fa
 .amount-disp.zero{color:var(--muted)}
 .amount-disp.expense::before{content:"−";margin-right:2px}
 .amount-disp.income::before{content:"+";margin-right:2px;color:var(--pos)}
-.cats{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:80px;gap:4px;overflow-x:auto;scrollbar-width:none;margin:6px -20px 14px;padding:0 20px;scroll-padding:0 20px}
+.cats{display:grid;grid-auto-flow:column;overscroll-behavior-x:contain;grid-template-rows:repeat(2,auto);grid-auto-columns:80px;gap:4px;overflow-x:auto;scrollbar-width:none;margin:6px -20px 14px;padding:0 20px;scroll-padding:0 20px}
 .cats::-webkit-scrollbar{display:none}
 .cat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:16px;font-size:12px;font-weight:700;color:var(--ink-2);border:1.5px solid transparent}
 .cat .emo{flex:none;width:40px;height:40px;font-size:20px}
@@ -265,7 +267,7 @@ button.pace-note{background:var(--hero-ink);color:var(--hero);padding:6px 12px}
 .sh .acts{display:flex;align-items:center;gap:4px}
 .scan{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:14px;color:var(--accent);background:var(--accent-soft);padding:8px 12px;border-radius:999px}
 .scan svg{width:18px;height:18px}
-.lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.lock{position:fixed;inset:0;z-index:100;touch-action:none;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
 html.locked .lock{display:flex}
 html.locked #app, html.locked .nav{visibility:hidden}
 .lock .ic{width:76px;height:76px;border-radius:26px;background:var(--hero);color:#fff;display:grid;place-items:center}
