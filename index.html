@@ -399,8 +399,30 @@ const okDate = s => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !i
 const okYM = s => typeof s === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
 const money2 = v => Math.round(Math.min(MAX_AMOUNT, Math.max(0, Number(v) || 0)) * 100) / 100;
 const str = (v, max) => String(v ?? "").slice(0, max);
+// Compact storage format: each operation is stored as a short array instead of an object (≈2× less space).
+const TX_KEYS = ["id","type","amount","cat","date","note","ts","u"];
+function toWire(d){
+  return { ...d, w: 3, tx: d.tx.map(t => {
+    const a = [t.id, t.type === "income" ? 1 : 0, t.amount, t.cat, t.date, t.note || "", t.ts && t.ts !== t.u ? t.ts : 0, t.u || 0];
+    let ex = null;
+    for (const k in t) if (!TX_KEYS.includes(k) && t[k] !== undefined) (ex || (ex = {}))[k] = t[k];
+    if (ex) a.push(ex);
+    return a;
+  }) };
+}
+function fromWire(d){
+  if (!d || !Array.isArray(d.tx) || !d.tx.some(Array.isArray)) return d;
+  return { ...d, tx: d.tx.map(a => {
+    if (!Array.isArray(a)) return a;
+    const t = { id: a[0], type: a[1] ? "income" : "expense", amount: a[2], cat: a[3], date: a[4], note: a[5] || "", ts: a[6] || a[7] || 0 };
+    if (a[7]) t.u = a[7];
+    if (a[8] && typeof a[8] === "object") for (const k in a[8]) if (!TX_KEYS.includes(k)) t[k] = a[8][k];
+    return t;
+  }) };
+}
 // Cleans any data (old versions, restored backups, a broken cloud copy) so the UI never crashes on it.
 function normalize(d){
+  d = fromWire(d);
   const b = blank();
   if (!d || typeof d !== "object") return b;
   const arr = v => Array.isArray(v) ? v.filter(x => x && typeof x === "object") : [];
@@ -480,8 +502,21 @@ function merge(L, R, localFresh){
 }
 
 /* ---------- storage: localStorage + Telegram CloudStorage ---------- */
-const LS_KEY = "finplan:data:v1";
-const CHUNK = 3900;
+const LS_KEY = "finplan:data:v1", UNDO_KEY = "finplan:undo", DAILY_KEY = "finplan:daily";
+const CHUNK_BYTES = 4000;          // Telegram allows 4096 per value; counted in bytes to be safe with Cyrillic and emoji
+const MAX_CHUNKS = 500;            // two copies (double buffer) + meta must fit into Telegram's 1024 keys
+// Splits text into pieces of at most maxBytes in UTF-8, never cutting an emoji in half.
+function chunkify(s, maxBytes = CHUNK_BYTES){
+  const out = []; let start = 0, bytes = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i), pair = c >= 0xD800 && c <= 0xDBFF;
+    const b = c < 0x80 ? 1 : c < 0x800 ? 2 : pair ? 4 : 3;
+    if (bytes + b > maxBytes) { out.push(s.slice(start, i)); start = i; bytes = 0; }
+    bytes += b; if (pair) i++;
+  }
+  out.push(s.slice(start));
+  return out;
+}
 const cloudOK = () => IN_TG && ver("6.9") && !!tg.CloudStorage;
 // Every CloudStorage call gets a timeout: some clients occasionally never call back.
 const timed = (fn, fallback, ms = 8000) => new Promise(res => {
@@ -496,7 +531,12 @@ const cs = {
 };
 const Store = {
   loadLocal(){ try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch(e){ return null; } },
-  saveLocal(d){ try { localStorage.setItem(LS_KEY, JSON.stringify(d)); return true; } catch(e){ return false; } },
+  saveLocal(d){
+    const txt = JSON.stringify(toWire(d));
+    try { localStorage.setItem(LS_KEY, txt); return true; } catch(e){}
+    // out of space: drop the safety copies (they are the least important) and try again
+    try { localStorage.removeItem(DAILY_KEY); localStorage.removeItem(UNDO_KEY); localStorage.setItem(LS_KEY, txt); return true; } catch(e){ return false; }
+  },
   async meta(){
     const m = await cs.get(["meta"]);
     if (m === null) throw new Error("cloud unavailable");
@@ -510,15 +550,15 @@ const Store = {
     const keys = Array.from({length: meta.n}, (_, i) => slot + i);
     const parts = {};
     for (let i = 0; i < keys.length; i += 50) { const got = await cs.get(keys.slice(i, i+50)); if (!got) return null; Object.assign(parts, got); }
-    try { const d = JSON.parse(keys.map(k => parts[k] || "").join("")); Store.slot = slot; return d; } catch(e){ return null; }
+    try { const d = JSON.parse(keys.map(k => parts[k] || "").join("")); Store.slot = slot; Store.chunks = meta.n; return d; } catch(e){ return null; }
   },
   async saveCloud(d){
-    const s = JSON.stringify(d);
-    const n = Math.max(1, Math.ceil(s.length / CHUNK));
+    const parts = chunkify(JSON.stringify(toWire(d))), n = parts.length;
+    if (n > MAX_CHUNKS) { Store.chunks = n; return "full"; }
     const slot = Store.slot === "a" ? "b" : "a";
-    for (let i = 0; i < n; i++) { if (!(await cs.set(slot + i, s.slice(i*CHUNK, (i+1)*CHUNK)))) return false; }
-    if (!(await cs.set("meta", JSON.stringify({ n, slot, updatedAt: d.updatedAt })))) return false;
-    Store.slot = slot;
+    for (let i = 0; i < n; i++) { if (!(await cs.set(slot + i, parts[i]))) return false; }
+    if (!(await cs.set("meta", JSON.stringify({ n, slot, updatedAt: d.updatedAt, w: 3 })))) return false;
+    Store.slot = slot; Store.chunks = n;
     cs.keys().then(keys => {
       if (!keys) return;
       const stale = keys.filter(k => { const m = /^([abd])(\d+)$/.exec(k); return m && (m[1] === "d" || (m[1] === slot && Number(m[2]) >= n)); });
@@ -527,9 +567,22 @@ const Store = {
     return true;
   },
   slot: null,
+  chunks: 0,
   synced: null,   // updatedAt of the cloud copy we last merged with or wrote
 };
 
+// Safety copies on this device: one before anything replaces all data, one per day.
+function hasData(d){ return d && (d.tx.length || d.plans.length || d.goals.length); }
+function saveCopy(key, reason){
+  if (!hasData(D)) return;
+  try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), reason, n: D.tx.length, data: toWire(D) })); } catch(e){}
+}
+function readCopy(key){ try { const c = JSON.parse(localStorage.getItem(key)); return c && c.data ? c : null; } catch(e){ return null; } }
+function dailyCopy(){
+  const c = readCopy(DAILY_KEY), today = todayISO();
+  if (!c || iso(new Date(c.at)) !== today) saveCopy(DAILY_KEY, "daily");
+}
+let localWarned = false;
 let D = null, IDX = null, freshDevice = false;
 function setData(d){ D = d; IDX = null; takeSnap(); }
 {
@@ -540,12 +593,16 @@ function setData(d){ D = d; IDX = null; takeSnap(); }
 function commit(){
   stampChanges();
   D.updatedAt = Date.now(); IDX = null;
-  if (!Store.saveLocal(D) && !cloudOK()) toast("Не удалось сохранить: в браузере закончилось место");
+  if (!Store.saveLocal(D) && !localWarned) {
+    localWarned = true;
+    toast(cloudOK() ? "Память на устройстве заполнена. Данные сохраняются в облако Telegram" : "Не удалось сохранить: на устройстве закончилось место", true);
+  }
   scheduleSync();
   render();
 }
 // Replace everything (demo, restore, reset): a new epoch tells other devices to drop their copy.
-function replaceAll(d){
+function replaceAll(d, reason){
+  saveCopy(UNDO_KEY, reason || "replace");
   const theme = D.settings.theme;
   d = normalize(d); d.settings.theme = theme; d.epoch = Date.now(); d.del = {};
   freshDevice = false;
@@ -554,11 +611,10 @@ function replaceAll(d){
 }
 
 /* ---------- sync ---------- */
-let syncTimer = null, syncBusy = false, syncAgain = false, syncState = "idle", retryMs = 0;
-function closingGuard(on){ try { if (ver("6.2")) on ? tg.enableClosingConfirmation() : tg.disableClosingConfirmation(); } catch(e){} }
+let syncTimer = null, syncBusy = false, syncAgain = false, syncState = "idle", retryMs = 0, retryTimer = null, badReads = 0;
+// Everything is saved on the device first, so closing the app never loses data: no "are you sure" prompt needed.
 function scheduleSync(delay = 400){
   if (!cloudOK()) return;
-  closingGuard(true);
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => { syncTimer = null; sync(); }, delay);
 }
@@ -566,13 +622,24 @@ async function sync(){
   if (!cloudOK()) return;
   if (syncBusy) { syncAgain = true; return; }
   syncBusy = true;
+  if (syncState === "full") syncState = "idle";
   try {
     const meta = await Store.meta();
+    let remote = null;
     if (meta && meta.updatedAt !== Store.synced) {
-      const remote = await Store.loadCloud(meta);
-      if (!remote) throw new Error("cloud copy unreadable");
+      remote = await Store.loadCloud(meta);
+      if (!remote) {
+        // A damaged cloud copy must not block syncing forever: after a few attempts this device's data replaces it.
+        if (++badReads < 3) throw new Error("cloud copy unreadable");
+        saveCopy(UNDO_KEY, "cloud-repair");
+        Store.synced = meta.updatedAt; badReads = 0;
+        if (D.updatedAt === meta.updatedAt) D.updatedAt++;
+      } else badReads = 0;
+    }
+    if (remote) {
       const R = normalize(remote);
       const merged = merge(D, R, freshDevice);
+      if (hasData(D) && merged.tx.length < D.tx.length - 5) saveCopy(UNDO_KEY, "sync");   // e.g. data was wiped on another device
       const same = JSON.stringify({ ...merged, updatedAt: 0 }) === JSON.stringify({ ...R, updatedAt: 0 });
       merged.updatedAt = same ? R.updatedAt : Math.max(Date.now(), D.updatedAt, R.updatedAt + 1);
       const changedHere = JSON.stringify(merged) !== JSON.stringify(D);
@@ -582,19 +649,22 @@ async function sync(){
     } else if (!meta) Store.synced = 0;
     freshDevice = false;
     if (D.updatedAt !== Store.synced && (D.updatedAt || meta)) {
-      if (!(await Store.saveCloud(D))) throw new Error("cloud write failed");
+      const r = await Store.saveCloud(D);
+      if (r === "full") { syncState = "full"; throw null; }
+      if (!r) throw new Error("cloud write failed");
       Store.synced = D.updatedAt;
     }
     syncState = "ok"; retryMs = 0;
   } catch(e) {
-    syncState = "error";
-    retryMs = Math.min(60000, (retryMs || 2500) * 2);
-    setTimeout(sync, retryMs);
+    if (syncState !== "full" || e) {
+      syncState = "error";
+      retryMs = Math.min(60000, (retryMs || 2500) * 2);
+      clearTimeout(retryTimer); retryTimer = setTimeout(sync, retryMs);
+    }
   } finally {
     syncBusy = false;
   }
   if (syncAgain) { syncAgain = false; return sync(); }
-  if (!syncTimer && syncState === "ok") closingGuard(false);
   if (ui.tab === "more" && !sheetOpen) render();
 }
 
@@ -960,9 +1030,16 @@ function viewMore(){
   const th = (v, l) => `<button data-act="theme" data-v="${v}" aria-pressed="${D.settings.theme === v}">${l}</button>`;
   const cur = c => `<button data-act="currency" data-v="${c}" aria-pressed="${D.settings.currency === c}">${c}</button>`;
   const cloud = cloudOK();
-  const syncText = !cloud ? "Данные хранятся только на этом устройстве"
+  const used = Math.min(100, Math.round(Store.chunks / MAX_CHUNKS * 100));
+  const syncText = !cloud ? "Данные хранятся только на этом устройстве. Сделайте резервную копию, чтобы не потерять их"
+    : syncState === "full" ? "Облако Telegram заполнено. Новые записи сохраняются только на этом устройстве, сделайте резервную копию"
     : syncState === "error" ? "Нет связи с облаком Telegram. Данные сохранены на устройстве, синхронизируем позже"
-    : "Данные синхронизируются через облако Telegram";
+    : `Данные синхронизируются через облако Telegram${used >= 1 ? `, занято ${used}%` : ""}`;
+  const copies = [[UNDO_KEY, "До последней замены данных"], [DAILY_KEY, "Ежедневная копия"]].map(([k, l]) => {
+    const c = readCopy(k); if (!c) return "";
+    const d = new Date(c.at);
+    return `<button class="set-row" data-act="copy-restore" data-k="${k}"><span>${l}<div class="s" style="font-size:13px;color:var(--muted)">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}, ${c.n} ${plural(c.n,"операция","операции","операций")}</div></span><span class="v">Вернуть</span></button>`;
+  }).join("");
   return `<header class="topbar"><h1>Настройки</h1></header>
   <section class="sec">
     <div class="panel">
@@ -981,8 +1058,11 @@ function viewMore(){
       <button class="set-row" data-act="demo"><span>Заполнить примером</span><span class="v">Демо</span></button>
       <button class="set-row danger" data-act="reset">Удалить все данные</button>
     </div>
-    <div class="sync"><i class="${!cloud ? "off" : syncState === "error" ? "err" : ""}"></i>${syncText}</div>
-  </section>`;
+    <div class="sync"><i class="${!cloud ? "off" : syncState === "error" || syncState === "full" || used >= 80 ? "err" : ""}"></i>${syncText}</div>
+    ${cloud && used >= 80 && syncState !== "full" ? `<p class="note">Облако заполнено на ${used}%. Сделайте резервную копию: когда место закончится, новые записи будут храниться только на этом устройстве.</p>` : ""}
+  </section>
+  ${copies ? `<section class="sec"><div class="sec-h"><h2>Автокопии на этом устройстве</h2></div><div class="panel">${copies}</div>
+    <p class="note">Создаются сами: раз в день и перед восстановлением, заполнением примером или удалением данных.</p></section>` : ""}`;
 }
 
 /* ---------- render ---------- */
@@ -1035,8 +1115,12 @@ function onBack(){ if (sheetOpen) closeSheet(); else if (ui.tab !== "home") { ui
 function confirmSheet(title, text, okLabel, onOk){
   openSheet(title, `<p class="confirm-text">${text}</p><button class="btn danger" data-act="confirm-ok">${okLabel}</button><button class="btn soft" data-act="close-sheet">Отмена</button>`, { onOk });
 }
-let toastT;
-function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.toggle("top", sheetOpen); t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2000); }
+let toastT, toastLockUntil = 0;
+// Warnings about data stay on screen longer and are not replaced by ordinary messages like "Saved".
+function toast(msg, important){
+  if (!important && Date.now() < toastLockUntil) return;
+  if (important) toastLockUntil = Date.now() + 4000;
+  const t = $("#toast"); t.textContent = msg; t.classList.toggle("top", sheetOpen); t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), important ? 4000 : 2000); }
 
 /* ---------- transaction sheet ---------- */
 let form = null;
@@ -1242,17 +1326,29 @@ function openCatNew(){
     <div class="field"><span class="lbl">Значок</span><div class="emojis">${CAT_EMOJIS.map((e, i) => `<button type="button" data-act="pick-emoji" data-v="${e}" aria-pressed="${i === 0}">${e}</button>`).join("")}</div></div>
     <button class="btn" data-act="cat-save">Создать категорию</button>`, { kind: "catnew" });
 }
+function backupText(){ return JSON.stringify({ app: "finplan", made: Date.now(), ...toWire(D) }); }
 function openBackup(){
+  const txt = backupText(), kb = Math.max(1, Math.round(new Blob([txt]).size / 1024));
   openSheet("Резервная копия", `
-    <p class="confirm-text">Скопируйте текст и сохраните его, например, в «Избранном» Telegram. Его можно вставить обратно через «Восстановить из копии».</p>
-    <div class="field"><textarea class="input" id="bkTxt" readonly>${esc(JSON.stringify(D))}</textarea></div>
+    <p class="confirm-text">В копии ${D.tx.length} ${plural(D.tx.length,"операция","операции","операций")}, ${D.plans.length} ${plural(D.plans.length,"платёж","платежа","платежей")} и ${D.goals.length} ${plural(D.goals.length,"цель","цели","целей")}, ${kb} КБ.
+    Скопируйте текст и сохраните его в «Заметки» или другое приложение для заметок. В сообщение Telegram длинный текст не поместится целиком.</p>
+    <div class="field"><textarea class="input" id="bkTxt" readonly>${esc(txt)}</textarea></div>
     <button class="btn" data-act="backup-copy">Скопировать</button>`, { kind: "backup" });
 }
 function openRestore(){
   openSheet("Восстановление", `
-    <p class="confirm-text">Вставьте текст резервной копии. Текущие данные будут заменены.</p>
-    <div class="field"><textarea class="input" id="rsTxt" placeholder='{"v":1, ...}'></textarea></div>
-    <button class="btn" data-act="restore-go">Восстановить</button>`, { kind: "restore" });
+    <p class="confirm-text">Вставьте текст резервной копии. Перед заменой я покажу, что в ней, а текущие данные сохранятся в автокопии.</p>
+    <div class="field"><textarea class="input" id="rsTxt" placeholder="Текст резервной копии"></textarea></div>
+    <button class="btn" data-act="restore-go">Проверить копию</button>`, { kind: "restore" });
+}
+// Accepts the copy even if a messenger or notes app added line breaks or extra text around it.
+function parseBackup(text){
+  const t = String(text || "").replace(/[\r\n\u2028\u2029]/g, "");
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  let d; try { d = JSON.parse(t.slice(a, b + 1)); } catch(e){ return null; }
+  if (!d || typeof d !== "object" || !Array.isArray(d.tx) || !(d.settings || d.cats || d.app === "finplan")) return null;
+  return normalize(d);
 }
 
 /* ---------- demo ---------- */
@@ -1457,15 +1553,32 @@ const A = {
   },
   "restore": () => openRestore(),
   "restore-go": () => {
-    try { const d = JSON.parse($("#rsTxt").value.trim()); if (!d || !Array.isArray(d.tx)) throw 0; closeSheet(); replaceAll(d); toast("Данные восстановлены"); haptic.ok(); }
-    catch(e) { toast("Это не похоже на резервную копию Финплана"); haptic.warn(); }
+    const d = parseBackup($("#rsTxt").value);
+    if (!d) { toast("Не получилось прочитать копию. Скопируйте текст целиком"); haptic.warn(); return; }
+    const last = d.tx.reduce((m, t) => t.date > m ? t.date : m, "");
+    const lastTxt = last ? `, последняя от ${Number(last.slice(8))} ${MONTHS_GEN[Number(last.slice(5,7)) - 1]} ${last.slice(0,4)}` : "";
+    openSheet("Восстановить эту копию?", `
+      <p class="confirm-text">В копии ${d.tx.length} ${plural(d.tx.length,"операция","операции","операций")}${lastTxt}, ${d.plans.length} ${plural(d.plans.length,"платёж","платежа","платежей")} и ${d.goals.length} ${plural(d.goals.length,"цель","цели","целей")}.
+      ${hasData(D) ? `Сейчас в приложении ${D.tx.length} ${plural(D.tx.length,"операция","операции","операций")}: они заменятся копией на всех устройствах, но останутся в «Автокопиях», и их можно будет вернуть.` : "Сейчас в приложении нет записей."}</p>
+      <button class="btn" data-act="restore-confirm">Восстановить</button><button class="btn soft" data-act="close-sheet">Отмена</button>`, { kind: "restore2", data: d });
+  },
+  "restore-confirm": () => {
+    const d = sheetCtx && sheetCtx.data; if (!d) return;
+    closeSheet(); ui.tab = "home"; ui.month = curYM(); replaceAll(d, "restore"); toast("Данные восстановлены"); haptic.ok();
+  },
+  "copy-restore": el => {
+    const c = readCopy(el.dataset.k); if (!c) return;
+    const d = new Date(c.at);
+    confirmSheet("Вернуть автокопию?", `Данные вернутся к состоянию на ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())} (${c.n} ${plural(c.n,"операция","операции","операций")}). Текущие данные сохранятся в автокопии.`, "Вернуть", () => {
+      ui.tab = "home"; ui.month = curYM(); replaceAll(c.data, "undo"); toast("Данные возвращены"); haptic.ok();
+    });
   },
   "demo": () => {
-    const go = () => { ui.month = curYM(); ui.tab = "home"; ui.animated = false; replaceAll(demoData()); window.scrollTo(0,0); toast("Пример загружен"); };
-    (D.tx.length || D.plans.length || D.goals.length) ? confirmSheet("Заменить данные примером?", "Все ваши текущие записи будут удалены.", "Заменить", go) : go();
+    const go = () => { ui.month = curYM(); ui.tab = "home"; ui.animated = false; replaceAll(demoData(), "demo"); window.scrollTo(0,0); toast("Пример загружен"); };
+    hasData(D) ? confirmSheet("Заменить данные примером?", "Ваши записи заменятся примером на всех устройствах. Вернуть их можно в «Автокопиях».", "Заменить", go) : go();
   },
-  "reset": () => confirmSheet("Удалить все данные?", "Операции, планы и цели будут удалены без возможности вернуть.", "Удалить всё", () => {
-    ui.tab = "home"; ui.month = curYM(); replaceAll(blank()); toast("Данные удалены"); }),
+  "reset": () => confirmSheet("Удалить все данные?", "Операции, планы и цели удалятся на всех устройствах. На этом устройстве останется автокопия, из которой их можно вернуть.", "Удалить всё", () => {
+    ui.tab = "home"; ui.month = curYM(); replaceAll(blank(), "reset"); toast("Данные удалены"); }),
 };
 function rerenderTx(){ form.note = ($("#txNote") || {}).value || form.note; $("#sheetBody").innerHTML = txSheetHtml(); showSelCat(); refreshTxSheet(); }
 function saveDayTo(goalId, amount){
@@ -1622,6 +1735,7 @@ let lastYM = curYM();
 function onResume(){
   const now = curYM();
   if (now !== lastYM) { if (ui.month === lastYM) ui.month = now; lastYM = now; if (!sheetOpen) render(); }
+  dailyCopy();
   sync();
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") onResume(); });
@@ -1630,6 +1744,7 @@ setupTelegram();
 applyTheme();
 render();
 bioInit();
+dailyCopy();
 sync();
 })();
 </script>
